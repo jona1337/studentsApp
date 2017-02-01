@@ -9,29 +9,82 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Date;
 
-/**
- *
- * @author Johny
- */
 public class StudModel {
+
+    private static final String DATA_PACKAGE = "studentsData";
+    private static final String STUDENTS_DATA_FILE = "students.txt";
+    private static final String GROUPS_DATA_FILE = "groups.txt";
 
     private static final StudModel instance = new StudModel();
 
     private ArrayList<Student> students;
     private ArrayList<StudGroup> groups;
 
+    private StudModel() {
+
+        students = new ArrayList<Student>();
+        groups = new ArrayList<StudGroup>();
+
+        createGroups();
+        createStudents();
+
+    }
+
+    public static StudModel getInstance() {
+        return instance;
+    }
+
+    /*--------------------*/
+
+    private String getAbsoluteDataCatalog() {
+        return new File("").getAbsolutePath();
+    }
+
+    private void checkDataFilesCatalog() {
+        String dataFilesCatalog = getAbsoluteDataCatalog() + "\\" + DATA_PACKAGE;
+        File catalog = new File(dataFilesCatalog);
+        if (!catalog.exists()) {
+            catalog.mkdir();
+        }
+    }
+
+    private File getStudentsDataFile() {
+        checkDataFilesCatalog();
+        String dataFilePatch = getAbsoluteDataCatalog() + "\\" + DATA_PACKAGE + "\\" + STUDENTS_DATA_FILE;
+        File file = new File(dataFilePatch);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return file;
+    }
+
+    private File getGroupsDataFile() {
+        checkDataFilesCatalog();
+        String dataFilePatch = getAbsoluteDataCatalog() + "\\" + DATA_PACKAGE + "\\" + GROUPS_DATA_FILE;
+        File file = new File(dataFilePatch);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return file;
+    }
+
     private void createStudents() {
 
         ObjectInputStream in = null;
         try {
-            File file = new File("students.txt");
-            if (file.exists()) {
-                in = new ObjectInputStream(new FileInputStream(file));
-                students = (ArrayList<Student>) in.readObject();
-            }
+            File file = getStudentsDataFile();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+            in = new ObjectInputStream(new FileInputStream(file));
+            students = (ArrayList<Student>) in.readObject();
+
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -46,18 +99,39 @@ public class StudModel {
 
     }
 
+    private void createGroups() {
+
+        ObjectInputStream in = null;
+        try {
+            File file = getGroupsDataFile();
+
+            in = new ObjectInputStream(new FileInputStream(file));
+            groups = (ArrayList<StudGroup>) in.readObject();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+    }
+    
     private void updateStudents() {
 
         ObjectOutputStream out = null;
         try {
 
-            File file = new File("students.txt");
-            if (!file.exists()) {
-                file.createNewFile();
-            }
+            File file = getStudentsDataFile();
 
             out = new ObjectOutputStream(new FileOutputStream(file));
             out.writeObject(students);
+
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -72,41 +146,12 @@ public class StudModel {
 
     }
 
-    private void createGroups() {
-
-        ObjectInputStream in = null;
-        try {
-            File file = new File("groups.txt");
-            if (file.exists()) {
-                in = new ObjectInputStream(new FileInputStream(file));
-                groups = (ArrayList<StudGroup>) in.readObject();
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-    }
-
     private void updateGroups() {
 
         ObjectOutputStream out = null;
         try {
 
-            File file = new File("groups.txt");
-            if (!file.exists()) {
-                file.createNewFile();
-            }
+            File file = getGroupsDataFile();
 
             out = new ObjectOutputStream(new FileOutputStream(file));
             out.writeObject(groups);
@@ -126,7 +171,7 @@ public class StudModel {
     }
 
     private void deleteStudentsByGroup(StudGroup group) {
-        ArrayList<Student> newStudents = new ArrayList<Student>();
+        ArrayList<Student> newStudents = new ArrayList<>();
         for (Student student : students) {
             if (!(student.getGroup().equals(group))) {
                 newStudents.add(student);
@@ -138,56 +183,13 @@ public class StudModel {
     
     /*--------------------*/
     
-    private StudModel() {
-
-        students = new ArrayList<Student>();
-        groups = new ArrayList<StudGroup>();
-
-        createGroups();
-        createStudents();
-
+    public int getStudentsCount() {
+        return students.size();
     }
 
-    public static StudModel getInstance() {
-        return instance;
+    public int getGroupsCount() {
+        return groups.size();
     }
-
-    /*--------------------*/
-    
-    public void deleteAll() {
-
-        students.clear();
-        groups.clear();
-
-        File file = new File("groups.txt");
-        if (file.exists()) {
-            file.delete();
-        }
-
-        file = new File("students.txt");
-        if (file.exists()) {
-            file.delete();
-        }
-
-    }
-
-    /*-----*/
-    
-    public Student getStudentByNumber(int number) {
-
-        Student student = students.get(number);
-        return student;
-
-    }
-
-    public StudGroup getGroupByNumber(int number) {
-
-        StudGroup group = groups.get(number);
-        return group;
-
-    }
-
-    /*-----*/
     
     public ArrayList<Student> getStudents() {
         return students;
@@ -196,15 +198,27 @@ public class StudModel {
     public ArrayList<StudGroup> getGroups() {
         return groups;
     }
-
-    /*-----*/
     
-    public int getStudentsCount() {
-        return students.size();
+    public Student getStudentByNumber(int number) {
+
+        int studentsCount = getStudentsCount();
+        if (number >= 0 && number < studentsCount) {
+            Student student = students.get(number);
+            return student;
+        }
+        return null;
+
     }
 
-    public int getGroupsCount() {
-        return groups.size();
+    public StudGroup getGroupByNumber(int number) {
+
+        int groupsCount = getGroupsCount();
+        if (number >= 0 && number < groupsCount) {
+            StudGroup group = groups.get(number);
+            return group;
+        }
+        return null;
+
     }
 
     /*--------------------*/
@@ -231,66 +245,91 @@ public class StudModel {
 
     /*-----*/
     
-    public void deleteStudent(int number) {
+    public void deleteAll() {
 
-        students.remove(number);
+        students.clear();
+        groups.clear();
+        updateGroups();
         updateStudents();
+        
+    }
+    
+    public void deleteStudent(int number) {
+        
+        Student student = getStudentByNumber(number);
+        if (student != null) {
+            students.remove(number);
+            updateStudents();
+        }
 
     }
 
     public void deleteGroup(int number) {
+        
         StudGroup group = getGroupByNumber(number);
-        deleteStudentsByGroup(group);
-        groups.remove(number);
-        updateGroups();
+        if (group != null) {
+            deleteStudentsByGroup(group);
+            groups.remove(number);
+            updateGroups();
+        }
 
     }
 
     /*-----*/
     
-    public void setStudentData(int number, String key, Object value) {
-
+    public void setStudentName(int number, String name) {
+        
         Student student = getStudentByNumber(number);
-
-        if (key.equals("name")) {
-
-            student.setName((String) value);
-
-        } else if (key.equals("group")) {
-
-            int groupNumber = (int) value;
-            StudGroup group = getGroupByNumber(number);
-            student.setGroup(group);
-
-        } else if (key.equals("date")) {
-
-            Date date = new Date();
-            if (value != null) {
-                date = (Date) value;
-            }
-
-            student.setEnrollmentDate(date);
-
+        if (student != null) {
+            student.setName(name);
+            updateStudents();
         }
-
-        updateStudents();
-
+        
+    }
+    
+    public void setStudentGroup(int number, int groupNumber) {
+        
+        Student student = getStudentByNumber(number);
+        if (student != null) {
+            StudGroup group = getGroupByNumber(groupNumber);
+            if (group != null) {
+                student.setGroup(group);
+                updateStudents();
+            }
+        }
+        
+    }
+    
+    public void setStudentEnrollmentDate(int number, Date date) {
+        
+        Student student = getStudentByNumber(number);
+        if (student != null) {
+            student.setEnrollmentDate(date);
+            updateStudents();
+        }
+        
     }
 
-    public void setGroupData(int number, String key, Object value) {
-
+    /*-----*/
+    
+    public void setGroupName(int number, String name) {
+        
         StudGroup group = getGroupByNumber(number);
-
-        if (key.equals("name")) {
-            group.setName((String) value);
-
-        } else if (key.equals("faculty")) {
-            group.setFaculty((String) value);
-
+        if (group != null) {
+            group.setName(name);
+            updateGroups();
         }
-
-        updateGroups();
-
+        
+    }
+    
+    public void setGroupFaculty(int number, String faculty) {
+        
+        StudGroup group = getGroupByNumber(number);
+        if (group != null) {
+            group.setFaculty(faculty);
+            updateGroups();
+        }
+        
     }
 
 }

@@ -1,6 +1,5 @@
 package com.jonacom.students;
 
-import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -8,10 +7,92 @@ import java.util.Date;
 
 public class StudController {
 
+    private static final StudController instance = new StudController();
+
     private static StudModel model;
     private static StudView view;
 
-    private static String getStudListString(ArrayList<Student> students) {
+    private StudController() {
+    }
+
+    public static StudController getInstance() {
+        return instance;
+    }
+
+    /*--------------------*/
+
+    public void addModel(StudModel model) {
+        StudController.model = model;
+    }
+
+    public void addView(StudView view) {
+        StudController.view = view;
+    }
+
+    public void start() {
+        view.printWelcome();
+        view.printCommands();
+        view.printDateInfo();
+        view.listenConsole();
+        view.printGoodbye();
+    }
+
+    /*--------------------*/
+
+    private String[] getCommandNextStepArgs(String[] args) {
+
+        //just delete first argument
+
+        if (args.length < 1) return args;
+
+        String[] newArgs = new String[args.length - 1];
+
+        for (int i = 1; i < args.length; i++) {
+            newArgs[i - 1] = args[i];
+        }
+        return newArgs;
+
+    }
+
+
+    public void onUserCommand(String command) {
+
+        String[] args = command.split(" ");
+
+        if (args.length < 1) return;
+
+        String mainCommand = args[0];
+        args = getCommandNextStepArgs(args);
+
+        switch (mainCommand) {
+            case "show":
+                showCommand(args);
+                break;
+            case "add":
+                addCommand(args);
+                break;
+            case "delete":
+                deleteCommand(args);
+                break;
+            case "set":
+                setDataCommand(args);
+                break;
+            case "deleteall":
+                deleteAllCommand(args);
+                break;
+            case "help":
+                helpCommand(args);
+                break;
+            default:
+                view.message("Invalid command!");
+                break;
+        }
+
+    }
+
+    /*--------------------*/
+
+    private String getStudListString(ArrayList<Student> students) {
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < students.size(); i++) {
@@ -26,7 +107,7 @@ public class StudController {
 
     }
 
-    private static String getGroupListString(ArrayList<StudGroup> groups) {
+    private String getGroupListString(ArrayList<StudGroup> groups) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < groups.size(); i++) {
             StudGroup group = groups.get(i);
@@ -40,94 +121,62 @@ public class StudController {
     }
 
     /*--------------------*/
-    
-    private static void commandHandler(String command) {
 
-        String[] words = command.split(" ");
+    private void helpCommand(String[] args) {
+        view.printCommands();
+        view.printDateInfo();
+    }
 
-        if (words.length > 0) {
-            if (words[0].equals("show")) {
 
-                if (words.length > 1) {
-                    if (words[1].equals("student")) {
+    private void showCommand(String[] args) {
 
-                        if (words.length > 2) {
-                            showStudentCommand(words);
-                        } else {
-                            showStudentsListCommand(words);
-                        }
-
-                    } else if (words[1].equals("group")) {
-
-                        if (words.length > 2) {
-                            showGroupCommand(words);
-                        } else {
-                            showGroupsListCommand(words);
-                        }
-
-                    }
-                }
-
-            } else if (words[0].equals("add")) {
-
-                if (words.length > 1) {
-                    if (words[1].equals("student")) {
-                        addStudentCommand(words);
-                    } else if (words[1].equals("group")) {
-                        addGroupCommand(words);
-                    }
-                }
-
-            } else if (words[0].equals("delete")) {
-                
-                if (words.length > 1) {
-                    if (words[1].equals("student")) {
-                        deleteStudentCommand(words);
-                    } else if (words[1].equals("group")) {
-                        deleteGroupCommand(words);
-                    }
-                }
-                
-            } else if (words[0].equals("deleteall")) {
-
-                deleteAllCommand(words);
-
-            } else if (words[0].equals("help")) {
-
-                view.printCommands();
-                view.printDateInfo();
-            }
-            
+        if (args.length < 1) {
+            view.message("Write object type!(student or group)");
+            return;
         }
 
+        String objectType = args[0];
+        args = getCommandNextStepArgs(args);
+
+        switch (objectType) {
+            case "student":
+                if (args.length > 0) {
+                    showStudentCommand(args);
+                } else {
+                    showStudentsListCommand(args);
+                }
+                break;
+            case "group":
+                if (args.length > 0) {
+                    showGroupCommand(args);
+                } else {
+                    showGroupsListCommand(args);
+                }
+                break;
+            default:
+                view.message("Invalid object type! Must be student or group.");
+                break;
+        }
+
+
     }
 
-    /*--------------------*/
-    
-    private static void deleteAllCommand(String[] args) {
-        model.deleteAll();
-        view.message("All objects was deleted.");
-    }
-    
-    /*-----*/
-    
-    private static void showStudentCommand(String[] args) {
+    private void showStudentCommand(String[] args) {
+
+        if (args.length < 1) return;
 
         try {
 
-            int studentNumber = Integer.valueOf(args[2]);
-            int studentsCount = model.getStudentsCount();
+            int studentNumber = Integer.valueOf(args[0]);
 
-            if (studentNumber >= 0 && studentNumber < studentsCount) {
-
-                Student student = model.getStudentByNumber(studentNumber);
+            Student student = model.getStudentByNumber(studentNumber);
+            if (student != null) {
                 StringBuilder sb = new StringBuilder("Student number ");
                 sb.append(studentNumber).
                         append(":\n").
                         append("   ").
                         append(student.toString());
                 view.message(sb.toString());
-
             } else {
                 view.message("Invalid student number!");
             }
@@ -138,12 +187,12 @@ public class StudController {
 
     }
 
-    private static void showStudentsListCommand(String[] args) {
+    private void showStudentsListCommand(String[] args) {
 
         ArrayList<Student> students = model.getStudents();
 
         StringBuilder sb = new StringBuilder();
-        if (students.size() == 0) {
+        if (students.isEmpty()) {
             sb.append("No students.");
         } else {
             sb.append("Students list(").
@@ -154,18 +203,16 @@ public class StudController {
 
     }
 
-    /*-----*/
-    
-    private static void showGroupCommand(String[] args) {
+    private void showGroupCommand(String[] args) {
+
+        if (args.length < 1) return;
 
         try {
 
-            int groupNumber = Integer.valueOf(args[2]);
-            int groupsCount = model.getGroupsCount();
+            int groupNumber = Integer.valueOf(args[0]);
+            StudGroup group = model.getGroupByNumber(groupNumber);
+            if (group != null) {
 
-            if (groupNumber >= 0 && groupNumber < groupsCount) {
-
-                StudGroup group = model.getGroupByNumber(groupNumber);
                 StringBuilder sb = new StringBuilder("Group number ");
                 sb.append(groupNumber).
                         append(":\n").
@@ -183,7 +230,7 @@ public class StudController {
 
     }
 
-    private static void showGroupsListCommand(String[] args) {
+    private void showGroupsListCommand(String[] args) {
 
         ArrayList<StudGroup> groups = model.getGroups();
 
@@ -200,146 +247,372 @@ public class StudController {
     }
 
     /*-----*/
-    
-    private static void addStudentCommand(String[] args) {
-        if (args.length >= 4) {
 
-            String name = args[2];
+    private void addCommand(String[] args) {
 
-            try {
+        int argsCount = args.length;
+        if (argsCount < 1) {
+            view.message("Write object type!(student or group)");
+            return;
+        }
 
-                int groupNumber = Integer.valueOf(args[3]);
-                int groupsCount = model.getGroupsCount();
+        String objectType = args[0];
+        args = getCommandNextStepArgs(args);
 
-                if (groupNumber >= 0 && groupNumber < groupsCount) {
-
-                    StudGroup group = model.getGroupByNumber(groupNumber);
-                    
-                    Date date = null;
-                    if (args.length >= 5) {
-
-                        SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
-                        try {
-                            date = format.parse(args[4]);
-                        } catch (ParseException e) {
-                            view.message("Invalid date format!");
-                            view.printDateInfo();
-                        }
-
-                    } else {
-                        date = new Date();
-                    }
-                    
-                    if (date != null) {
-                        model.addStudent(name, group, date);
-                        view.message("Student was successfully created.");
-                    }
-
-                } else {
-                    view.message("Invalid group number!");
-                }
-
-            } catch (NumberFormatException e) {
-                view.message("Invalid group number format!");
-            }
-
-        } else {
-            view.message("Invalid command!");
+        switch (objectType) {
+            case "student":
+                addStudentCommand(args);
+                break;
+            case "group":
+                addGroupCommand(args);
+                break;
+            default:
+                view.message("Invalid object type! Must be student or group.");
+                break;
         }
     }
 
-    private static void addGroupCommand(String[] args) {
-        if (args.length >= 4) {
+    private void addStudentCommand(String[] args) {
 
-            String name = args[2];
-            String faculty = args[3];
-            
-            model.addGroup(name, faculty);
-            view.message("Group was successfully created.");
-
-        } else {
-            view.message("Invalid command!");
+        if (args.length < 1) {
+            view.message("Write student name!");
+            return;
         }
+
+        String name = args[0];
+        args = getCommandNextStepArgs(args);
+
+        if (args.length < 1) {
+            view.message("Write group number!");
+            return;
+        }
+
+        try {
+
+            int groupNumber = Integer.valueOf(args[0]);
+            StudGroup group = model.getGroupByNumber(groupNumber);
+
+            args = getCommandNextStepArgs(args);
+
+            if (group != null) {
+
+                Date date = new Date();
+
+                if (args.length > 0) {
+
+                    SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
+                    try {
+                        date = format.parse(args[0]);
+                    } catch (ParseException e) {
+                        view.message("Invalid date format!");
+                        view.printDateInfo();
+                        return;
+                    }
+                }
+
+                model.addStudent(name, group, date);
+                view.message("Student was successfully created.");
+
+
+            } else {
+                view.message("Invalid group number!");
+            }
+        } catch (NumberFormatException e) {
+            view.message("Invalid group number format!");
+        }
+
+
+    }
+
+    private void addGroupCommand(String[] args) {
+
+        if (args.length < 1) {
+            view.message("Write group name!");
+            return;
+        }
+
+        String name = args[0];
+        args = getCommandNextStepArgs(args);
+
+        if (args.length < 1) {
+            view.message("Write group faculty!");
+            return;
+        }
+
+        String faculty = args[0];
+        args = getCommandNextStepArgs(args);
+
+        model.addGroup(name, faculty);
+        view.message("Group was successfully created.");
+
     }
 
     /*-----*/
-    
-    private static void deleteStudentCommand(String[] args) {
-        
-        if (args.length >= 3) {
-            
-            try {
 
-                int studentNumber = Integer.valueOf(args[2]);
-                int studentsCount = model.getStudentsCount();
+    private void deleteAllCommand(String[] args) {
+        model.deleteAll();
+        view.message("All objects was deleted.");
+    }
 
-                if (studentNumber >= 0 && studentNumber < studentsCount) {
-                    
-                    model.deleteStudent(studentNumber);
-                    view.message("Student was successfully deleted.");
-                    
-                } else {
-                    view.message("Invalid student mumber!");
-                }
+    private void deleteCommand(String[] args) {
 
-            } catch (NumberFormatException e) {
+        int argsCount = args.length;
+        if (argsCount < 1) {
+            view.message("Write object type!(student or group)");
+            return;
+        }
+
+        String objectType = args[0];
+        args = getCommandNextStepArgs(args);
+
+        switch (objectType) {
+            case "student":
+                deleteStudentCommand(args);
+                break;
+            case "group":
+                deleteGroupCommand(args);
+                break;
+            default:
+                view.message("Invalid object type! Must be student or group.");
+                break;
+        }
+
+    }
+
+    private void deleteStudentCommand(String[] args) {
+
+        if (args.length < 1) {
+            view.message("Write student number!");
+            return;
+        }
+
+        try {
+
+            int studentNumber = Integer.valueOf(args[0]);
+            Student student = model.getStudentByNumber(studentNumber);
+
+            args = getCommandNextStepArgs(args);
+
+            if (student != null) {
+                model.deleteStudent(studentNumber);
+                view.message("Student was successfully deleted.");
+            } else {
                 view.message("Invalid student mumber!");
             }
-            
-        } else {
-            view.message("Invalid student mumber!");
+
+        } catch (NumberFormatException e) {
+            view.message("Invalid student mumber format!");
         }
-        
+
+
     }
-    
-    private static void deleteGroupCommand(String[] args) {
-        
-        if (args.length >= 3) {
-            
-            try {
 
-                int groupNumber = Integer.valueOf(args[2]);
-                int groupsCount = model.getGroupsCount();
+    private void deleteGroupCommand(String[] args) {
 
-                if (groupNumber >= 0 && groupNumber < groupsCount) {
-                    
-                    model.deleteGroup(groupNumber);
-                    view.message("Group was successfully deleted.");
-                    
-                } else {
-                    view.message("Invalid group mumber!");
-                }
+        if (args.length < 1) {
+            view.message("Write group number!");
+            return;
+        }
 
-            } catch (NumberFormatException e) {
+        try {
+
+            int groupNumber = Integer.valueOf(args[0]);
+            StudGroup group = model.getGroupByNumber(groupNumber);
+
+            args = getCommandNextStepArgs(args);
+
+            if (group != null) {
+
+                model.deleteGroup(groupNumber);
+                view.message("Group was successfully deleted.");
+
+            } else {
                 view.message("Invalid group mumber!");
             }
-            
-        } else {
-            view.message("Invalid group mumber!");
+
+        } catch (NumberFormatException e) {
+            view.message("Invalid group mumber format!");
         }
-        
+
+
     }
-    
-    
-    /*-----------------------*/
-    
-    public static void main(String[] args) throws IOException {
 
-        model = StudModel.getInstance();
-        view = StudView.getInstance();
+    /*-----*/
 
-        view.printWelcome();
-        view.printCommands();
-        view.printDateInfo();
+    private void setDataCommand(String[] args) {
 
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
-        String text;
-        while (!(text = br.readLine()).equals("q")) {
-            commandHandler(text);
+        int argsCount = args.length;
+        if (argsCount < 1) {
+            view.message("Write object type!(student or group)");
+            return;
         }
 
-        view.printGoodbye();
+        String objectType = args[0];
+        args = getCommandNextStepArgs(args);
+
+        switch (objectType) {
+            case "student":
+                setStudentDataCommand(args);
+                break;
+            case "group":
+                setGroupDataCommand(args);
+                break;
+            default:
+                view.message("Invalid object type! Must be student or group.");
+                break;
+        }
+
+    }
+
+    private void setStudentDataCommand(String[] args) {
+
+        if (args.length < 1) {
+            view.message("Write student number!");
+            return;
+        }
+
+        int studentNumber = 0;
+        try {
+            studentNumber = Integer.valueOf(args[0]);
+        } catch (NumberFormatException e) {
+            view.message("Invalid student mumber format!");
+            return;
+        }
+
+        Student student = model.getStudentByNumber(studentNumber);
+        if (student == null) {
+            view.message("Invalid student mumber!");
+            return;
+        }
+
+        args = getCommandNextStepArgs(args);
+
+        if (args.length < 1) {
+            view.message("Write data name! Must be name, group or date.");
+            return;
+        }
+
+        String dataKey = args[0];
+        args = getCommandNextStepArgs(args);
+
+        switch (dataKey) {
+            case "name":
+
+                if (args.length < 1) {
+                    view.message("Write student name!");
+                    return;
+                }
+
+                model.setStudentName(studentNumber, args[0]);
+                break;
+
+            case "group":
+
+                if (args.length < 1) {
+                    view.message("Write group number!");
+                    return;
+                }
+
+                int groupNumber = 0;
+
+                try {
+                    groupNumber = Integer.valueOf(args[0]);
+                } catch (NumberFormatException e) {
+                    view.message("Invalid group mumber format!");
+                    return;
+                }
+
+                args = getCommandNextStepArgs(args);
+
+                StudGroup group = model.getGroupByNumber(groupNumber);
+                if (group == null) {
+                    view.message("Invalid group number!");
+                    return;
+                }
+
+                model.setStudentGroup(studentNumber, groupNumber);
+                break;
+
+            case "date":
+
+                Date date = new Date();
+
+                if (args.length > 0) {
+                    SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
+                    try {
+                        date = format.parse(args[0]);
+                    } catch (ParseException e) {
+                        view.message("Invalid date format!");
+                        view.printDateInfo();
+                        return;
+                    }
+                }
+
+                model.setStudentEnrollmentDate(studentNumber, date);
+                break;
+
+            default:
+                view.message("Invalid data name! Must be name, group or date.");
+                break;
+        }
+    }
+
+    private void setGroupDataCommand(String[] args) {
+
+        if (args.length < 1) {
+            view.message("Write group number!");
+            return;
+        }
+
+        int groupNumber = 0;
+        try {
+            groupNumber = Integer.valueOf(args[0]);
+        } catch (NumberFormatException e) {
+            view.message("Invalid group number format!");
+            return;
+        }
+
+        StudGroup group = model.getGroupByNumber(groupNumber);
+        if (group == null) {
+            view.message("Invalid group number!");
+            return;
+        }
+
+        args = getCommandNextStepArgs(args);
+
+        if (args.length < 1) {
+            view.message("Write data name! Must be name or faculty.");
+            return;
+        }
+
+        String dataKey = args[0];
+        args = getCommandNextStepArgs(args);
+
+        switch (dataKey) {
+            case "name":
+
+                if (args.length < 1) {
+                    view.message("Write group name!");
+                    return;
+                }
+
+                model.setGroupName(groupNumber, args[0]);
+                break;
+
+            case "faculty":
+
+                if (args.length < 1) {
+                    view.message("Write group faculty name!");
+                    return;
+                }
+
+                model.setGroupFaculty(groupNumber, args[0]);
+                break;
+
+            default:
+                view.message("Invalid data name! Must be name or faculty.");
+                break;
+        }
 
     }
 
